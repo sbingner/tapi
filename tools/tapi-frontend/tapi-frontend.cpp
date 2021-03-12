@@ -12,9 +12,13 @@
 /// A tool to run the TAPI frontent for testing.
 ///
 //===----------------------------------------------------------------------===//
+#include "tapi/Config/Version.h"
 #include "tapi/Core/APIPrinter.h"
+#include "tapi/Core/APIJSONSerializer.h"
+#include "tapi/Core/HeaderFile.h"
 #include "tapi/Diagnostics/Diagnostics.h"
 #include "tapi/Frontend/Frontend.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Format.h"
@@ -24,6 +28,9 @@
 #include "llvm/Support/Process.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/raw_ostream.h"
+#include "clang/Basic/FileManager.h"
+#include "clang/Basic/Version.inc"
+#include "clang/Config/config.h"
 
 using namespace llvm;
 using namespace TAPI_INTERNAL;
@@ -45,15 +52,69 @@ static cl::opt<std::string> language_std("std",
 
 static cl::list<std::string> xparser("Xparser", cl::cat(tapiCategory));
 
+static cl::opt<std::string> whitelist("whitelist",
+                                      cl::desc("whitelist YAML file"),
+                                      cl::cat(tapiCategory));
+
 static cl::opt<std::string> inputFilename(cl::Positional,
                                           cl::desc("<input file>"),
                                           cl::cat(tapiCategory));
+static cl::opt<std::string> jsonOutput("json", cl::desc("output json file"),
+                                       cl::cat(tapiCategory));
 
 static cl::opt<bool> verbose("v", cl::desc("verbose"), cl::cat(tapiCategory));
-static cl::opt<bool> noColors("no-colors", cl::desc("don't use color output"),
-                              cl::cat(tapiCategory));
+static cl::opt<bool> noColors("no-colors", cl::desc("don't use color output"), cl::cat(tapiCategory));
 static cl::opt<bool> noPrint("no-print", cl::desc("don't print the API"),
                              cl::cat(tapiCategory));
+static cl::opt<bool> skipExtern("skip-external-headers",
+                                cl::desc("skip external headers"),
+                                cl::cat(tapiCategory));
+static cl::opt<bool> missingAPI("diag-missing-api",
+                                cl::desc("diagnose missing api"),
+                                cl::cat(tapiCategory));
+static cl::opt<bool> noCascadingDiags("no-cascading-diagnostics",
+                                cl::desc("disable cascading errors"),
+                                cl::cat(tapiCategory));
+static cl::opt<unsigned>
+    diagnosticDepth("diag-depth",
+                    cl::desc("depth of diagnostics (0 is ignored)"),
+                    cl::cat(tapiCategory));
+
+static std::string getClangResourcesPath(clang::FileManager &fm) {
+  // Exists solely for the purpose of lookup of the resource path.
+  // This just needs to be some symbol in the binary.
+  static int staticSymbol;
+  // The driver detects the builtin header path based on the path of the
+  // executable.
+  auto mainExecutable =
+      sys::fs::getMainExecutable("tapi-frontend", &staticSymbol);
+  StringRef dir = llvm::sys::path::parent_path(mainExecutable);
+
+  // Compute the path to the resource directory.
+  auto fileExists = [&fm](StringRef path) {
+    llvm::vfs::Status result;
+    if (fm.getNoncachedStatValue(path, result))
+      return false;
+    return result.exists();
+  };
+
+  // Try the default tapi path.
+  SmallString<PATH_MAX>
+      path(dir);
+  llvm::sys::path::append(path, "..", Twine("lib") + CLANG_LIBDIR_SUFFIX,
+                          "tapi", TAPI_MAKE_STRING(TAPI_VERSION));
+  if (fileExists(path))
+    return path.str();
+
+  // Try the default clang path. This is used by check-tapi.
+  path = dir;
+  llvm::sys::path::append(path, "..", Twine("lib") + CLANG_LIBDIR_SUFFIX,
+                          "clang", CLANG_VERSION_STRING);
+  if (fileExists(path))
+    return path.str();
+
+  return std::string();
+}
 
 int main(int argc, const char *argv[]) {
   // Standard set up, so program fails gracefully.
@@ -73,6 +134,11 @@ int main(int argc, const char *argv[]) {
   }
 
   std::vector<FrontendContext> results;
+  HeaderSeq headers;
+  SmallString<PATH_MAX> fullPath(inputFilename);
+  clang::FileManager fm((clang::FileSystemOptions()));
+  fm.makeAbsolutePath(fullPath);
+  headers.emplace_back(inputFilename, HeaderType::Public);
   for (const auto &target : targets) {
     FrontendJob job;
 
@@ -81,6 +147,8 @@ int main(int argc, const char *argv[]) {
     job.language_std = language_std;
     job.verbose = verbose;
     job.clangExtraArgs = xparser;
+    job.headerFiles = headers;
+    job.clangResourcePath = getClangResourcesPath(fm);
     auto result = runFrontend(job, inputFilename);
     if (!result)
       return -1;
@@ -91,6 +159,21 @@ int main(int argc, const char *argv[]) {
     for (auto &result : results) {
       APIPrinter printer(errs(), !noColors);
       result.visit(printer);
+    }
+  }
+
+  if (!jsonOutput.empty()) {
+    std::error_code err;
+    raw_fd_ostream jsonOut(jsonOutput, err);
+    if (err) {
+      errs() << "Cannot open \'" << jsonOutput
+             << "\' for json output: " << err.message() << "\n";
+      return 1;
+    }
+
+    for (auto &r : results) {
+      APIJSONSerializer serializer(r.api);
+      serializer.serialize(jsonOut);
     }
   }
 

@@ -37,6 +37,7 @@ struct HeaderFile {
   bool isUmbrellaHeader{false};
   bool isExcluded{false};
   bool isExtra{false};
+  bool isPreInclude{false};
 
   HeaderFile(StringRef fullPath, HeaderType type,
              StringRef relativePath = StringRef())

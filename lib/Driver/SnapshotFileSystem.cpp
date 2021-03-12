@@ -13,7 +13,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "tapi/Driver/SnapshotFileSystem.h"
-#include "tapi/Core/STLExtras.h"
 #include "tapi/Defines.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Errc.h"
@@ -32,6 +31,13 @@ SnapshotFileSystem::lookupPath(sys::path::const_iterator start,
                                Entry *current) const {
   if (*start != current->getName())
     return make_error_code(llvm::errc::no_such_file_or_directory);
+
+  if (auto *symlink = dyn_cast<SymlinkEntry>(current)) {
+    auto result = lookupPath(symlink->getLinkPath());
+    if (auto error = result.getError())
+      return error;
+    current = *result;
+  }
 
   if (++start == end)
     return current;
@@ -169,29 +175,14 @@ public:
     if ((ec = result.getError()))
       return;
 
-    sys::fs::file_type Type;
-    switch ((*current)->getKind()) {
-        case SnapshotFileSystem::EntryKind::Directory:
-            Type = sys::fs::file_type::directory_file;
-            break;
-        case SnapshotFileSystem::EntryKind::File:
-            Type = sys::fs::file_type::regular_file;
-            break;
-    }
-
-    CurrentEntry = llvm::vfs::directory_entry(path.str(), Type);
+    CurrentEntry = {path.str(), result->getType()};
   }
 
   std::error_code increment() override {
     sys::fs::file_type Type;
     if (++current == end) {
-        if (Status().isDirectory())
-            Type = sys::fs::file_type::directory_file;
-        else
-            Type = sys::fs::file_type::regular_file;
-
-        CurrentEntry = llvm::vfs::directory_entry(Status().getName().str(), Type);
-        return {};
+      CurrentEntry = llvm::vfs::directory_entry();
+      return {};
     }
 
     SmallString<PATH_MAX> path(dir);
@@ -200,16 +191,7 @@ public:
     if (auto ec = result.getError())
       return ec;
 
-    switch ((*current)->getKind()) {
-        case SnapshotFileSystem::EntryKind::Directory:
-            Type = sys::fs::file_type::directory_file;
-            break;
-        case SnapshotFileSystem::EntryKind::File:
-            Type = sys::fs::file_type::regular_file;
-            break;
-    }
-
-    CurrentEntry = llvm::vfs::directory_entry(path.str(), Type);
+    CurrentEntry = {path.str(), result->getType()};
     return {};
   }
 };
@@ -264,6 +246,18 @@ SnapshotFileSystem::addFile(StringRef path, StringRef externalPath) {
       std::make_unique<FileEntry>(filename, externalPath)));
 }
 
+ErrorOr<SnapshotFileSystem::SymlinkEntry *>
+SnapshotFileSystem::addSymlink(StringRef path, StringRef linkPath) {
+  auto filename = sys::path::filename(path);
+  auto parent = sys::path::parent_path(path);
+
+  auto directory = addDirectory(parent);
+  if (auto ec = directory.getError())
+    return ec;
+  return cast<SymlinkEntry>(directory.get()->addContent(
+      std::make_unique<SymlinkEntry>(filename, linkPath)));
+}
+
 ErrorOr<SnapshotFileSystem::DirectoryEntry *>
 SnapshotFileSystem::lookupOrCreate(StringRef name, DirectoryEntry *current) {
   if (current == nullptr) {
@@ -302,7 +296,9 @@ LLVM_DUMP_METHOD void SnapshotFileSystem::dumpEntry(raw_ostream &os,
                                                     unsigned indent) const {
   os.indent(indent);
   if (auto *file = dyn_cast<FileEntry>(entry))
-    os << file->getName() << " --> " << file->getExternalPath() << "\n";
+    os << file->getName() << " : " << file->getExternalPath() << "\n";
+  else if (auto *symlink = dyn_cast<SymlinkEntry>(entry))
+    os << symlink->getName() << " --> " << symlink->getLinkPath() << "\n";
   else
     os << entry->getName() << "/\n";
 

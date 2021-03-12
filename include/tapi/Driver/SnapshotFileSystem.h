@@ -25,16 +25,16 @@
 #include "llvm/Support/VirtualFileSystem.h"
 #include <string>
 
-using llvm::vfs::directory_iterator;
-using llvm::vfs::File;
 using llvm::vfs::Status;
+using llvm::vfs::File;
+using llvm::vfs::directory_iterator;
 
 TAPI_NAMESPACE_INTERNAL_BEGIN
 
 /// \brief The snapshot virtual file system.
 class SnapshotFileSystem final : public llvm::vfs::FileSystem {
 private:
-  enum class EntryKind { Directory, File };
+  enum class EntryKind { Directory, File, Symlink };
 
   class Entry {
     EntryKind kind;
@@ -89,6 +89,21 @@ private:
     }
   };
 
+  class SymlinkEntry final : public Entry {
+  private:
+    std::string linkPath;
+
+  public:
+    SymlinkEntry(StringRef name, StringRef linkPath)
+        : Entry(EntryKind::Symlink, name), linkPath(linkPath) {}
+
+    StringRef getLinkPath() const { return linkPath; }
+
+    static bool classof(const Entry *entry) {
+      return entry->getKind() == EntryKind::Symlink;
+    }
+  };
+
   ErrorOr<DirectoryEntry *> lookupOrCreate(StringRef name,
                                            DirectoryEntry *current = nullptr);
 
@@ -133,6 +148,8 @@ public:
   ErrorOr<DirectoryEntry *> addDirectory(StringRef path);
 
   ErrorOr<FileEntry *> addFile(StringRef path, StringRef externalPath);
+
+  ErrorOr<SymlinkEntry *> addSymlink(StringRef path, StringRef linkPath);
 
   void dump(raw_ostream &os = llvm::dbgs()) const;
 

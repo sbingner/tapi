@@ -65,7 +65,7 @@ static bool findAndAddHeaderFiles(HeaderSeq &headersOut, FileManager &fm,
 bool findAndAddHeaderFiles(HeaderSeq &headersOut, FileManager &fm,
                            DiagnosticsEngine &diag, PathSeq headersIn,
                            HeaderType type, StringRef sysroot,
-                           StringRef basePath, unsigned diagID) {
+                           StringRef basePath) {
   for (auto &path : headersIn) {
     if (findAndAddHeaderFiles(headersOut, fm, diag, path, type))
       continue;
@@ -80,7 +80,8 @@ bool findAndAddHeaderFiles(HeaderSeq &headersOut, FileManager &fm,
     if (findAndAddHeaderFiles(headersOut, fm, diag, frameworkPath, type))
       continue;
 
-    diag.report(diagID) << path;
+    diag.report(diag::warn_no_such_header_file)
+        << (type == HeaderType::Private) << path;
     return false;
   }
   return true;

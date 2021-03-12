@@ -15,9 +15,9 @@
 #include "tapi/Core/FileManager.h"
 #include "tapi/Defines.h"
 #include "clang/Basic/FileSystemStatCache.h"
-#include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/VirtualFileSystem.h"
 
 using namespace llvm;
 using namespace clang;
@@ -38,7 +38,7 @@ FileManager::FileManager(
 }
 
 bool FileManager::exists(StringRef path) {
-  vfs::Status result;
+  llvm::vfs::Status result;
   if (getNoncachedStatValue(path, result))
     return false;
   return result.exists();
