@@ -79,7 +79,7 @@ ErrorOr<Status> SnapshotFileSystem::status(const Twine &path, Entry *entry) {
     return status;
   } // directory
   auto *directory = cast<DirectoryEntry>(entry);
-  return Status::copyWithNewName(directory->getStatus(), path.str());
+  return Status::copyWithNewName(directory->getStatus(), path);
 }
 
 ErrorOr<Status> SnapshotFileSystem::status(const Twine &path) {
@@ -125,7 +125,7 @@ public:
 };
 } // end anonymous namespace
 
-ErrorOr<std::unique_ptr<clang::vfs::File>>
+ErrorOr<std::unique_ptr<llvm::vfs::File>>
 SnapshotFileSystem::openFileForRead(const Twine &path) {
   auto result = lookupPath(path);
   if (auto ec = result.getError())
@@ -145,10 +145,10 @@ SnapshotFileSystem::openFileForRead(const Twine &path) {
 
   auto status = getFileStatus(path, *externalStatus);
   return std::unique_ptr<File>(
-      make_unique<FileWithFixedStatus>(std::move(*result2), status));
+      std::make_unique<FileWithFixedStatus>(std::move(*result2), status));
 }
 
-class SnapshotDirIterImpl : public clang::vfs::detail::DirIterImpl {
+class SnapshotDirIterImpl : public llvm::vfs::detail::DirIterImpl {
   std::string dir;
   SnapshotFileSystem &fs;
   SnapshotFileSystem::DirectoryEntry::iterator current, end;
@@ -169,13 +169,29 @@ public:
     if ((ec = result.getError()))
       return;
 
-    CurrentEntry = *result;
+    sys::fs::file_type Type;
+    switch ((*current)->getKind()) {
+        case SnapshotFileSystem::EntryKind::Directory:
+            Type = sys::fs::file_type::directory_file;
+            break;
+        case SnapshotFileSystem::EntryKind::File:
+            Type = sys::fs::file_type::regular_file;
+            break;
+    }
+
+    CurrentEntry = llvm::vfs::directory_entry(path.str(), Type);
   }
 
   std::error_code increment() override {
+    sys::fs::file_type Type;
     if (++current == end) {
-      CurrentEntry = Status();
-      return {};
+        if (Status().isDirectory())
+            Type = sys::fs::file_type::directory_file;
+        else
+            Type = sys::fs::file_type::regular_file;
+
+        CurrentEntry = llvm::vfs::directory_entry(Status().getName().str(), Type);
+        return {};
     }
 
     SmallString<PATH_MAX> path(dir);
@@ -184,7 +200,16 @@ public:
     if (auto ec = result.getError())
       return ec;
 
-    CurrentEntry = *result;
+    switch ((*current)->getKind()) {
+        case SnapshotFileSystem::EntryKind::Directory:
+            Type = sys::fs::file_type::directory_file;
+            break;
+        case SnapshotFileSystem::EntryKind::File:
+            Type = sys::fs::file_type::regular_file;
+            break;
+    }
+
+    CurrentEntry = llvm::vfs::directory_entry(path.str(), Type);
     return {};
   }
 };
@@ -236,7 +261,7 @@ SnapshotFileSystem::addFile(StringRef path, StringRef externalPath) {
   if (auto ec = directory.getError())
     return ec;
   return cast<FileEntry>(directory.get()->addContent(
-      make_unique<FileEntry>(filename, externalPath)));
+      std::make_unique<FileEntry>(filename, externalPath)));
 }
 
 ErrorOr<SnapshotFileSystem::DirectoryEntry *>
@@ -252,7 +277,7 @@ SnapshotFileSystem::lookupOrCreate(StringRef name, DirectoryEntry *current) {
       return cast<DirectoryEntry>(entry.get());
   }
   return cast<DirectoryEntry>(
-      current->addContent(make_unique<DirectoryEntry>(name)));
+      current->addContent(std::make_unique<DirectoryEntry>(name)));
 }
 
 ErrorOr<SnapshotFileSystem::DirectoryEntry *>

@@ -169,7 +169,7 @@ struct FrontendOptions {
   std::vector<llvm::Triple> targets;
 
   /// \brief Specify the language to use for parsing.
-  clang::InputKind::Language language = clang::InputKind::ObjC;
+  clang::Language language = clang::Language::ObjC;
 
   /// \brief Language standard to use for parsing.
   std::string language_std;

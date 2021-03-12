@@ -22,7 +22,6 @@
 
 using namespace llvm;
 using namespace TAPI_INTERNAL;
-using clang::InputKind;
 
 using Mapping = std::pair<std::string, uint64_t>;
 using Reexports = std::pair<std::string, ArchitectureSet>;
@@ -125,7 +124,7 @@ template <> struct MappingTraits<DriverOptions> {
   static void mapping(IO &io, DriverOptions &opts) {
     io.mapOptional("print-version", opts.printVersion, false);
     io.mapOptional("print-help", opts.printHelp, false);
-    io.mapOptional("inputs", opts.inputs, {});
+    io.mapOptional("inputs", opts.inputs, (PathSeq){});
     io.mapOptional("output-path", opts.outputPath, std::string());
   }
 };
@@ -147,11 +146,11 @@ struct MappingContextTraits<LinkerOptions, Snapshot::MappingContext> {
     io.mapOptional("compatibility-version", opts.compatibilityVersion,
                    PackedVersion());
     io.mapOptional("is-dynamic-library", opts.isDynamicLibrary, false);
-    io.mapOptional("allowable-clients", opts.allowableClients, {});
-    io.mapOptional("reexported-libraries", opts.reexportInstallNames, {});
-    io.mapOptional("reexported-libraries2", opts.reexportedLibraries, {});
-    io.mapOptional("reexported-library-paths", opts.reexportedLibraryPaths, {});
-    io.mapOptional("reexported-frameworks", opts.reexportedFrameworks, {});
+    io.mapOptional("allowable-clients", opts.allowableClients, (__typeof__(opts.allowableClients)){});
+    io.mapOptional("reexported-libraries", opts.reexportInstallNames, (__typeof__(opts.reexportInstallNames)){});
+    io.mapOptional("reexported-libraries2", opts.reexportedLibraries, (__typeof__(opts.reexportedLibraries)){});
+    io.mapOptional("reexported-library-paths", opts.reexportedLibraryPaths, (__typeof__(opts.reexportedLibraryPaths)){});
+    io.mapOptional("reexported-frameworks", opts.reexportedFrameworks, (__typeof__(opts.reexportedFrameworks)){});
     io.mapOptional("is-application-extension-safe",
                    opts.isApplicationExtensionSafe, false);
   }
@@ -164,17 +163,17 @@ struct MappingContextTraits<tapi::internal::FrontendOptions,
                       Snapshot::MappingContext &ctx) {
     io.mapOptional("platform", ctx.platform, Platform::unknown);
     io.mapOptional("os-version", ctx.osVersion, std::string());
-    io.mapOptional("targets", opts.targets, {});
-    io.mapOptional("language", opts.language, InputKind::ObjC);
+    io.mapOptional("targets", opts.targets, (__typeof__(opts.targets)){});
+    io.mapOptional("language", opts.language, clang::Language::ObjC);
     io.mapOptional("language-std", opts.language_std, std::string());
     io.mapOptional("isysroot", opts.isysroot, std::string());
     io.mapOptional("umbrella", opts.umbrella, std::string());
-    io.mapOptional("system-framework-paths", opts.systemFrameworkPaths, {});
-    io.mapOptional("system-include-paths", opts.systemIncludePaths, {});
-    io.mapOptional("framework-paths", opts.frameworkPaths, {});
-    io.mapOptional("library-paths", opts.libraryPaths, {});
-    io.mapOptional("include-paths", opts.includePaths, {});
-    io.mapOptional("macros", opts.macros, {});
+    io.mapOptional("system-framework-paths", opts.systemFrameworkPaths, (__typeof__(opts.systemFrameworkPaths)){});
+    io.mapOptional("system-include-paths", opts.systemIncludePaths, (__typeof__(opts.systemIncludePaths)){});
+    io.mapOptional("framework-paths", opts.frameworkPaths, (__typeof__(opts.frameworkPaths)){});
+    io.mapOptional("library-paths", opts.libraryPaths, (__typeof__(opts.libraryPaths)){});
+    io.mapOptional("include-paths", opts.includePaths, (__typeof__(opts.includePaths)){});
+    io.mapOptional("macros", opts.macros, (__typeof__(opts.macros)){});
     io.mapOptional("use-rtti", opts.useRTTI, true);
     io.mapOptional("visibility", opts.visibility, std::string());
     io.mapOptional("enable-modules", opts.enableModules, false);
@@ -183,7 +182,7 @@ struct MappingContextTraits<tapi::internal::FrontendOptions,
                    false);
     io.mapOptional("use-objc-arc", opts.useObjectiveCARC, false);
     io.mapOptional("use-objc-weak", opts.useObjectiveCWeakARC, false);
-    io.mapOptional("clang-extra-args", opts.clangExtraArgs, {});
+    io.mapOptional("clang-extra-args", opts.clangExtraArgs, (__typeof__(opts.clangExtraArgs)){});
     io.mapOptional("clang-resource-path", opts.clangResourcePath,
                    std::string());
   }
@@ -205,10 +204,10 @@ template <> struct MappingTraits<TAPIOptions> {
                    std::string());
     io.mapOptional("private-umbrella-header-path",
                    opts.privateUmbrellaHeaderPath, std::string());
-    io.mapOptional("extra-public-headers", opts.extraPublicHeaders, {});
-    io.mapOptional("extra-private-headers", opts.extraPrivateHeaders, {});
-    io.mapOptional("exclude-public-headers", opts.excludePublicHeaders, {});
-    io.mapOptional("exclude-private-headers", opts.excludePrivateHeaders, {});
+    io.mapOptional("extra-public-headers", opts.extraPublicHeaders, (__typeof__(opts.extraPublicHeaders)){});
+    io.mapOptional("extra-private-headers", opts.extraPrivateHeaders, (__typeof__(opts.extraPrivateHeaders)){});
+    io.mapOptional("exclude-public-headers", opts.excludePublicHeaders, (__typeof__(opts.excludePublicHeaders)){});
+    io.mapOptional("exclude-private-headers", opts.excludePrivateHeaders, (__typeof__(opts.excludePrivateHeaders)){});
     io.mapOptional("verify-against", opts.verifyAgainst, std::string());
     io.mapOptional("verification-mode", opts.verificationMode,
                    VerificationMode::ErrorsOnly);

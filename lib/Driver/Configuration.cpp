@@ -152,8 +152,8 @@ StringRef Configuration::getSysRoot() const {
   return file.isysroot;
 }
 
-clang::InputKind::Language Configuration::getLanguage(StringRef path) const {
-  if (commandLine.language != clang::InputKind::Unknown)
+clang::Language Configuration::getLanguage(StringRef path) const {
+  if (commandLine.language != clang::Language::Unknown)
     return commandLine.language;
 
   auto it = pathToConfig.find(getCanonicalPath(path));

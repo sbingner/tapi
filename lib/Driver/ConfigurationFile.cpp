@@ -120,7 +120,7 @@ template <> struct MappingTraits<const ConfigurationFile *> {
     Platform platform;
     PackedVersion version;
     std::string isysroot;
-    clang::InputKind::Language language;
+    clang::Language language;
     PathSeq includePaths;
     PathSeq frameworkPaths;
     std::vector<Macro> macros;
@@ -135,7 +135,7 @@ template <> struct MappingTraits<const ConfigurationFile *> {
     io.mapRequired("sdk-platform", keys->platform);
     io.mapRequired("sdk-version", keys->version);
     io.mapRequired("sdk-root", keys->isysroot);
-    io.mapOptional("language", keys->language, clang::InputKind::ObjC);
+    io.mapOptional("language", keys->language, clang::Language::ObjC);
     io.mapOptional("include-paths", keys->includePaths);
     io.mapOptional("framework-paths", keys->frameworkPaths);
     io.mapOptional("macros", keys->macros);

@@ -142,7 +142,7 @@ static bool inlineFrameworks(Context &ctx, InterfaceFile *dylib) {
     std::shared_ptr<InterfaceFile> reexportedDylib;
     auto *file2 = file.get().release();
     if (auto *extended = dyn_cast<ExtendedInterfaceFile>(file2))
-      reexportedDylib = make_unique<InterfaceFile>(std::move(*extended));
+      reexportedDylib = std::make_unique<InterfaceFile>(std::move(*extended));
     else
       reexportedDylib =
           std::unique_ptr<InterfaceFile>(cast<InterfaceFile>(file2));
@@ -232,11 +232,13 @@ static bool inlineFrameworks(Context &ctx, InterfaceFile *dylib) {
 }
 
 static bool stubifyDynamicLibrary(Context &ctx) {
-  const auto *inputFile = ctx.fm.getFile(ctx.inputPath);
-  if (!inputFile) {
-    ctx.diag.report(clang::diag::err_drv_no_such_file) << ctx.inputPath;
+  const auto inputFileOrErr = ctx.fm.getFile(ctx.inputPath);
+  if (auto ec = inputFileOrErr.getError()) {
+    ctx.diag.report(clang::diag::err_drv_no_such_file)
+        << ctx.inputPath << ec.message();;
     return false;
   }
+  const auto *inputFile = inputFileOrErr.get();
   auto bufferOrErr = ctx.fm.getBufferForFile(inputFile);
   if (auto ec = bufferOrErr.getError()) {
     ctx.diag.report(diag::err_cannot_read_file)
@@ -264,7 +266,7 @@ static bool stubifyDynamicLibrary(Context &ctx) {
   std::unique_ptr<InterfaceFile> interface;
   auto *file2 = file.get().release();
   if (auto *extended = dyn_cast<ExtendedInterfaceFile>(file2))
-    interface = make_unique<InterfaceFile>(std::move(*extended));
+    interface = std::make_unique<InterfaceFile>(std::move(*extended));
   else
     interface = std::unique_ptr<InterfaceFile>(cast<InterfaceFile>(file2));
 
@@ -422,9 +424,10 @@ static bool stubifyDirectory(Context &ctx) {
     }
 
     // We only have to look at files.
-    auto *file = ctx.fm.getFile(path);
-    if (!file)
+    auto fileOrErr = ctx.fm.getFile(path);
+    if (!fileOrErr)
       continue;
+    auto *file = fileOrErr.get();
 
     if (ctx.deletePrivateFrameworks &&
         isPrivatePath(path.drop_front(ctx.inputPath.size()))) {
@@ -458,7 +461,7 @@ static bool stubifyDirectory(Context &ctx) {
     std::unique_ptr<InterfaceFile> interface;
     auto *file3 = file2.get().release();
     if (auto *extended = dyn_cast<ExtendedInterfaceFile>(file3))
-      interface = make_unique<InterfaceFile>(std::move(*extended));
+      interface = std::make_unique<InterfaceFile>(std::move(*extended));
     else
       interface = std::unique_ptr<InterfaceFile>(cast<InterfaceFile>(file3));
 

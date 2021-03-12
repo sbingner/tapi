@@ -38,8 +38,8 @@ class IO;
 TAPI_NAMESPACE_INTERNAL_BEGIN
 
 using Macro = std::pair<std::string, bool>;
-static const clang::InputKind::Language defaultLanguage =
-    clang::InputKind::ObjC;
+static const clang::Language defaultLanguage =
+    clang::Language::ObjC;
 
 namespace configuration {
 namespace v1 {
@@ -54,7 +54,7 @@ struct FrameworkConfiguration {
   std::string name;
   std::string path;
   std::string installName;
-  clang::InputKind::Language language;
+  clang::Language language;
   PathSeq includePaths;
   PathSeq frameworkPaths;
   std::vector<Macro> macros;
@@ -65,7 +65,7 @@ struct FrameworkConfiguration {
 struct DylibConfiguration {
   std::string name;
   std::string installName;
-  clang::InputKind::Language language;
+  clang::Language language;
   PathSeq includePaths;
   PathSeq binaries;
   std::vector<Macro> macros;
@@ -77,7 +77,7 @@ struct Configuration {
   Platform platform;
   PackedVersion version;
   std::string isysroot;
-  clang::InputKind::Language language;
+  clang::Language language;
   PathSeq includePaths;
   PathSeq frameworkPaths;
   std::vector<Macro> macros;
@@ -107,7 +107,7 @@ public:
   Platform platform;
   PackedVersion version;
   std::string isysroot;
-  clang::InputKind::Language language;
+  clang::Language language;
   PathSeq includePaths;
   PathSeq frameworkPaths;
   std::vector<Macro> macros;

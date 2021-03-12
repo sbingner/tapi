@@ -21,9 +21,9 @@
 #include "tapi/Core/Utils.h"
 #include "tapi/Diagnostics/Diagnostics.h"
 #include "clang/Basic/Diagnostic.h"
-#include "clang/Basic/VirtualFileSystem.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Support/VirtualFileSystem.h"
 
 using namespace llvm;
 using namespace clang;
@@ -53,11 +53,10 @@ bool DirectoryScanner::scanDylibDirectory(
     sys::path::append(path, subDirectory);
     return _fm.getDirectory(path, /*CacheFailure=*/false);
   };
-  const DirectoryEntry *directoryEntryPublic = getDirectory("usr/include");
-  const DirectoryEntry *directoryEntryPrivate =
-      getDirectory("usr/local/include");
+  auto directoryEntryPublicOrError = getDirectory("usr/include");
+  auto directoryEntryPrivateOrError = getDirectory("usr/local/include");
 
-  if (!directoryEntryPublic && !directoryEntryPrivate) {
+  if (!directoryEntryPublicOrError && !directoryEntryPrivateOrError) {
     errs() << "error: Cannot find public or private sub directories: "
            << directory << "\n";
   }
@@ -66,13 +65,13 @@ bool DirectoryScanner::scanDylibDirectory(
   auto &dylib = frameworks.back();
   dylib.isDynamicLibrary = true;
 
-  if (directoryEntryPublic) {
-    if (!scanHeaders(dylib, directoryEntryPublic->getName(),
+  if (directoryEntryPublicOrError) {
+    if (!scanHeaders(dylib, directoryEntryPublicOrError.get()->getName(),
                      HeaderType::Public))
       return false;
   }
-  if (directoryEntryPrivate) {
-    if (!scanHeaders(dylib, directoryEntryPrivate->getName(),
+  if (directoryEntryPrivateOrError) {
+    if (!scanHeaders(dylib, directoryEntryPrivateOrError.get()->getName(),
                      HeaderType::Private))
       return false;
   }
@@ -114,10 +113,10 @@ bool DirectoryScanner::scanDirectory(StringRef directory,
 bool DirectoryScanner::scanFrameworksDirectory(
     std::vector<Framework> &frameworks, StringRef directory) const {
   std::error_code ec;
-  auto &fs = *_fm.getVirtualFileSystem();
+  auto &fs = _fm.getVirtualFileSystem();
   for (vfs::directory_iterator i = fs.dir_begin(directory, ec), ie; i != ie;
        i.increment(ec)) {
-    auto path = i->getName();
+    auto path = i->path();
 
     // Skip files that not exist. This usually happens for broken symlinks.
     if (ec == std::errc::no_such_file_or_directory) {
@@ -158,10 +157,10 @@ bool DirectoryScanner::scanFrameworkDirectory(Framework &framework) const {
   // there is a Versions directory, then we have symlinks and directly proceed
   // to the Versiosn folder.
   std::error_code ec;
-  auto &fs = *_fm.getVirtualFileSystem();
+  auto &fs = _fm.getVirtualFileSystem();
   for (vfs::directory_iterator i = fs.dir_begin(framework.getPath(), ec), ie;
        i != ie; i.increment(ec)) {
-    auto path = i->getName();
+    auto path = i->path();
 
     // Skip files that not exist. This usually happens for broken symlinks.
     if (ec == std::errc::no_such_file_or_directory) {
@@ -232,10 +231,10 @@ bool DirectoryScanner::scanFrameworkDirectory(Framework &framework) const {
 bool DirectoryScanner::scanHeaders(Framework &framework, StringRef path,
                                    HeaderType type) const {
   std::error_code ec;
-  auto &fs = *_fm.getVirtualFileSystem();
+  auto &fs = _fm.getVirtualFileSystem();
   for (vfs::recursive_directory_iterator i(fs, path, ec), ie; i != ie;
        i.increment(ec)) {
-    auto headerPath = i->getName();
+    auto headerPath = i->path();
 
     // Skip files that not exist. This usually happens for broken symlinks.
     if (ec == std::errc::no_such_file_or_directory) {
@@ -265,10 +264,10 @@ bool DirectoryScanner::scanHeaders(Framework &framework, StringRef path,
 
 bool DirectoryScanner::scanModules(Framework &framework, StringRef path) const {
   std::error_code ec;
-  auto &fs = *_fm.getVirtualFileSystem();
+  auto &fs = _fm.getVirtualFileSystem();
   for (vfs::recursive_directory_iterator i(fs, path, ec), ie; i != ie;
        i.increment(ec)) {
-    auto path = i->getName();
+    auto path = i->path();
 
     // Skip files that not exist. This usually happens for broken symlinks.
     if (ec == std::errc::no_such_file_or_directory) {
@@ -293,10 +292,10 @@ bool DirectoryScanner::scanModules(Framework &framework, StringRef path) const {
 bool DirectoryScanner::scanFrameworkVersionsDirectory(Framework &framework,
                                                       StringRef path) const {
   std::error_code ec;
-  auto &fs = *_fm.getVirtualFileSystem();
+  auto &fs = _fm.getVirtualFileSystem();
   for (vfs::directory_iterator i = fs.dir_begin(path, ec), ie; i != ie;
        i.increment(ec)) {
-    auto path = i->getName();
+    auto path = i->path();
 
     // Skip files that not exist. This usually happens for broken symlinks.
     if (ec == std::errc::no_such_file_or_directory) {
@@ -327,10 +326,10 @@ bool DirectoryScanner::scanFrameworkVersionsDirectory(Framework &framework,
 bool DirectoryScanner::scanLibraryDirectory(Framework &framework,
                                             StringRef path) const {
   std::error_code ec;
-  auto &fs = *_fm.getVirtualFileSystem();
+  auto &fs = _fm.getVirtualFileSystem();
   for (vfs::recursive_directory_iterator i(fs, path, ec), ie; i != ie;
        i.increment(ec)) {
-    auto path = i->getName();
+    auto path = i->path();
 
     // Skip files that not exist. This usually happens for broken symlinks.
     if (ec == std::errc::no_such_file_or_directory) {
@@ -456,10 +455,10 @@ bool DirectoryScanner::scanSDKContent(StringRef directory,
 
   // Scan the bundles and extensions in /System/Library.
   std::error_code ec;
-  auto &fs = *_fm.getVirtualFileSystem();
+  auto &fs = _fm.getVirtualFileSystem();
   for (auto i = fs.dir_begin(getDirectory("System/Library"), ec);
        i != vfs::directory_iterator(); i.increment(ec)) {
-    auto path = i->getName();
+    auto path = i->path();
 
     // Skip files that not exist. This usually happens for broken symlinks.
     if (ec == std::errc::no_such_file_or_directory) {

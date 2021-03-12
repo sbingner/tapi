@@ -20,10 +20,12 @@ set_target_properties(libtapi
   OUTPUT_NAME "tapi"
   )
 
+if(APPLE)
+
 set(DYLIB_VERSION "${LLVM_VERSION_MAJOR}.${LLVM_VERSION_MINOR}.${LLVM_VERSION_PATCH}")
 set_property(TARGET libtapi APPEND_STRING
   PROPERTY
-  LINK_FLAGS " -current_version ${DYLIB_VERSION} -compatibility_version 1 -allowable_client ld"
+  LINK_FLAGS " -current_version ${DYLIB_VERSION} -compatibility_version 1 " #-allowable_client ld"
   )
 
 if(LINKER_SUPPORTS_NO_INITS)
@@ -32,3 +34,6 @@ if(LINKER_SUPPORTS_NO_INITS)
     LINK_FLAGS " -Wl,-no_inits"
     )
 endif()
+
+endif()
+

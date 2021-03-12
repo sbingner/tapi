@@ -47,14 +47,17 @@ public:
   FileManager(const clang::FileSystemOptions &fileSystemOpts,
               llvm::IntrusiveRefCntPtr<FileSystemStatCacheFactory>
                   cacheFactory = nullptr,
-              llvm::IntrusiveRefCntPtr<clang::vfs::FileSystem> fs = nullptr);
+              llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> fs = nullptr);
 
   /// \brief Check if a particular path exists.
   bool exists(StringRef path);
 
   /// \brief Check if a particular path is a directory.
   bool isDirectory(StringRef path, bool CacheFailure = true) {
-    return getDirectory(path, CacheFailure) != nullptr;
+    if (auto DirEntry = getDirectory(path, CacheFailure))
+       return true;
+    else
+       return false;
   }
 
   /// \brief Check if a particular path is a symlink using directory_iterator.

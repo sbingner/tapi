@@ -96,7 +96,7 @@ public:
     context.ast = &compiler.getASTContext();
     context.sourceMgr = &compiler.getSourceManager();
     context.pp = compiler.getPreprocessorPtr();
-    return llvm::make_unique<APIVisitor>(context);
+    return std::make_unique<APIVisitor>(context);
   }
 
   FrontendContext &context;

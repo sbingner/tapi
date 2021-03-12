@@ -18,13 +18,13 @@
 #include "tapi/Driver/StatRecorder.h"
 #include "tapi/LinkerInterfaceFile.h"
 #include "clang/Basic/Version.inc"
-#include "clang/Basic/VirtualFileSystem.h"
 #include "clang/Config/config.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Option/OptSpecifier.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include <string>
 #include <utility>
 
@@ -706,14 +706,14 @@ bool Options::processFrontendOptions(DiagnosticsEngine &diag,
   // Handle language option.
   if (auto *arg = args.getLastArg(OPT_x)) {
     frontendOptions.language =
-        StringSwitch<clang::InputKind::Language>(arg->getValue())
-            .Case("c", clang::InputKind::C)
-            .Case("c++", clang::InputKind::CXX)
-            .Case("objective-c", clang::InputKind::ObjC)
-            .Case("objective-c++", clang::InputKind::ObjCXX)
-            .Default(clang::InputKind::Unknown);
+        StringSwitch<clang::Language>(arg->getValue())
+            .Case("c", clang::Language::C)
+            .Case("c++", clang::Language::CXX)
+            .Case("objective-c", clang::Language::ObjC)
+            .Case("objective-c++", clang::Language::ObjCXX)
+            .Default(clang::Language::Unknown);
 
-    if (frontendOptions.language == clang::InputKind::Unknown) {
+    if (frontendOptions.language == clang::Language::Unknown) {
       diag.report(clang::diag::err_drv_invalid_value)
           << arg->getAsString(args) << arg->getValue();
       return false;
@@ -723,9 +723,9 @@ bool Options::processFrontendOptions(DiagnosticsEngine &diag,
   // Handle ObjC/ObjC++ switch.
   for (auto *arg : args.filtered(OPT_ObjC, OPT_ObjCXX)) {
     if (arg->getOption().matches(OPT_ObjC))
-      frontendOptions.language = clang::InputKind::ObjC;
+      frontendOptions.language = clang::Language::ObjC;
     else
-      frontendOptions.language = clang::InputKind::ObjCXX;
+      frontendOptions.language = clang::Language::ObjCXX;
   }
 
   // Handle language std.
@@ -983,7 +983,7 @@ static void updateClangResourceDirFiles(DiagnosticsEngine &diag,
     SmallString<PATH_MAX> srcPath(header);
 
     // Normalize path.
-    if (fm.getVirtualFileSystem()->makeAbsolute(externalPath))
+    if (fm.getVirtualFileSystem().makeAbsolute(externalPath))
       return;
     sys::path::remove_dots(externalPath, /*remove_dot_dot=*/true);
     sys::path::replace_path_prefix(srcPath, clangResourcePath,
@@ -1052,7 +1052,7 @@ Options::Options(DiagnosticsEngine &diag, ArrayRef<const char *> argString) {
       globalSnapshot->requestSnapshot();
 
     globalSnapshot->setWorkingDirectory(
-        fm->getVirtualFileSystem()->getCurrentWorkingDirectory().get());
+        fm->getVirtualFileSystem().getCurrentWorkingDirectory().get());
   }
 
   // This has to happen after processing the snapshot options, but before all

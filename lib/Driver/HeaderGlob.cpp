@@ -77,7 +77,7 @@ Expected<std::unique_ptr<HeaderGlob>> HeaderGlob::create(StringRef globString,
   auto regex = Regex(regexString);
   std::string error;
   if (regex.isValid(error))
-    return make_unique<HeaderGlob>(globString, std::move(regex), type);
+    return std::make_unique<HeaderGlob>(globString, std::move(regex), type);
 
   return make_error<StringError>(error, inconvertibleErrorCode());
 }

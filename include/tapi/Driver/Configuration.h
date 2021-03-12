@@ -33,7 +33,7 @@ class FileManager;
 class Context;
 
 struct CommandLineConfiguration {
-  clang::InputKind::Language language = clang::InputKind::Unknown;
+  clang::Language language = clang::Language::Unknown;
   std::string std;
   std::string isysroot;
   std::string publicUmbrellaHeaderPath;
@@ -68,7 +68,7 @@ struct Configuration {
                         Context &context);
 
   StringRef getSysRoot() const;
-  clang::InputKind::Language getLanguage(StringRef path) const;
+  clang::Language getLanguage(StringRef path) const;
   const std::vector<Macro> &getMacros(StringRef path) const;
   const PathSeq &getIncludePaths(StringRef path) const;
   const PathSeq &getFrameworkPaths(StringRef path) const;

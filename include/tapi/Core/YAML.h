@@ -22,6 +22,7 @@
 #include "tapi/Core/Platform.h"
 #include "tapi/Core/YAMLReaderWriter.h"
 #include "clang/Frontend/FrontendOptions.h"
+#include "clang/Basic/LangStandard.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/YAMLTraits.h"
 
@@ -90,9 +91,8 @@ template <> struct ScalarTraits<UUID> {
   static QuotingType mustQuote(StringRef);
 };
 
-using clang::InputKind;
-template <> struct ScalarEnumerationTraits<InputKind::Language> {
-  static void enumeration(IO &io, InputKind::Language &kind);
+template <> struct ScalarEnumerationTraits<clang::Language> {
+  static void enumeration(IO &io, clang::Language &kind);
 };
 
 } // end namespace yaml.

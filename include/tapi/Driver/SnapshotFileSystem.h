@@ -16,23 +16,23 @@
 
 #include "tapi/Core/LLVM.h"
 #include "tapi/Defines.h"
-#include "clang/Basic/VirtualFileSystem.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include <string>
 
-using clang::vfs::directory_iterator;
-using clang::vfs::File;
-using clang::vfs::Status;
+using llvm::vfs::directory_iterator;
+using llvm::vfs::File;
+using llvm::vfs::Status;
 
 TAPI_NAMESPACE_INTERNAL_BEGIN
 
 /// \brief The snapshot virtual file system.
-class SnapshotFileSystem final : public clang::vfs::FileSystem {
+class SnapshotFileSystem final : public llvm::vfs::FileSystem {
 private:
   enum class EntryKind { Directory, File };
 
@@ -54,7 +54,7 @@ private:
   public:
     DirectoryEntry(StringRef name)
         : Entry(EntryKind::Directory, name),
-          status(name, clang::vfs::getNextVirtualUniqueID(),
+          status(name, llvm::vfs::getNextVirtualUniqueID(),
                  llvm::sys::TimePoint<>(), 0, 0, 0,
                  llvm::sys::fs::file_type::directory_file,
                  llvm::sys::fs::all_all) {}
@@ -108,15 +108,15 @@ private:
 
 public:
   SnapshotFileSystem(IntrusiveRefCntPtr<FileSystem> externalFS =
-                         clang::vfs::getRealFileSystem())
-      : root(llvm::make_unique<DirectoryEntry>("/")),
+                         llvm::vfs::getRealFileSystem())
+      : root(std::make_unique<DirectoryEntry>("/")),
         externalFS(std::move(externalFS)) {}
 
   /// \brief Get the status of the entry at \p Path, if one exists.
   llvm::ErrorOr<Status> status(const Twine &path) override;
 
   /// \brief Get a \p File object for the file at \p Path, if one exists.
-  llvm::ErrorOr<std::unique_ptr<clang::vfs::File>>
+  llvm::ErrorOr<std::unique_ptr<llvm::vfs::File>>
   openFileForRead(const Twine &path) override;
 
   /// \brief Get a directory_iterator for \p Dir.

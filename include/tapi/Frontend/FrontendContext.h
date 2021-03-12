@@ -39,7 +39,7 @@ struct FrontendContext {
   FrontendContext(
       StringRef workingDirectory = StringRef(),
       IntrusiveRefCntPtr<FileSystemStatCacheFactory> cacheFactory = nullptr,
-      IntrusiveRefCntPtr<clang::vfs::FileSystem> vfs = nullptr);
+      IntrusiveRefCntPtr<llvm::vfs::FileSystem> vfs = nullptr);
 
   void visit(APIVisitor &visitor) { api.visit(visitor); }
 };

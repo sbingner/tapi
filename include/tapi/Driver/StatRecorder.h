@@ -18,6 +18,8 @@
 #include "tapi/Driver/Snapshot.h"
 #include "tapi/Driver/SnapshotFileSystem.h"
 #include "clang/Basic/FileSystemStatCache.h"
+#include "clang/Sema/Lookup.h"
+#include "llvm/Support/VirtualFileSystem.h"
 
 TAPI_NAMESPACE_INTERNAL_BEGIN
 
@@ -28,21 +30,21 @@ class StatRecorder final : public clang::FileSystemStatCache {
 public:
   StatRecorder() = default;
 
-  LookupResult getStat(StringRef path, clang::FileData &data, bool isFile,
-                       std::unique_ptr<clang::vfs::File> *file,
-                       clang::vfs::FileSystem &fs) override {
-    auto result = statChained(path, data, isFile, file, fs);
+  std::error_code getStat(StringRef path, llvm::vfs::Status &status, bool isFile,
+                       std::unique_ptr<llvm::vfs::File> *file,
+                       llvm::vfs::FileSystem &fs) override {
+    auto err = get(path, status, isFile, file, nullptr, fs);
 
     // Don't record non existing files and directories.
-    if (result == CacheMissing)
-      return result;
+    if (err)
+      return err;
 
-    if (data.IsDirectory)
+    if (status.isDirectory())
       TAPI_INTERNAL::globalSnapshot->recordDirectory(path);
     else
       TAPI_INTERNAL::globalSnapshot->recordFile(path);
 
-    return result;
+    return std::error_code();
   }
 };
 

@@ -17,7 +17,7 @@
 #include "tapi/Core/LLVM.h"
 #include "tapi/Core/Utils.h"
 #include "tapi/Defines.h"
-#include "clang/Basic/VirtualFileSystem.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/Error.h"
@@ -54,8 +54,8 @@ enumerateFiles(FileManager &fm, StringRef path,
                const std::function<bool(StringRef)> &func) {
   PathSeq files;
   std::error_code ec;
-  auto &fs = *fm.getVirtualFileSystem();
-  for (clang::vfs::recursive_directory_iterator i(fs, path, ec), ie; i != ie;
+  auto &fs = fm.getVirtualFileSystem();
+  for (llvm::vfs::recursive_directory_iterator i(fs, path, ec), ie; i != ie;
        i.increment(ec)) {
 
     // Skip files that not exist. This usually happens for broken symlinks.
@@ -67,7 +67,7 @@ enumerateFiles(FileManager &fm, StringRef path,
     if (ec)
       return errorCodeToError(ec);
 
-    auto path = i->getName();
+    auto path = i->path();
     if (func(path))
       files.emplace_back(path);
   }

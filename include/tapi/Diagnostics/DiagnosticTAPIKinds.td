@@ -35,6 +35,15 @@ class DiagCategory<string Name> {
   string CategoryName = Name;
 }
 
+// Textual substitutions which may be performed on the text of diagnostics
+class TextSubstitution<string Text> {
+  string Substitution = Text;
+  // TODO: These are only here to allow substitutions to be declared inline with
+  // diagnostics
+  string Component = "";
+  string CategoryName = "";
+}
+
 // Diagnostic Groups.
 class DiagGroup<string Name, list<DiagGroup> subgroups = []> {
   string GroupName = Name;

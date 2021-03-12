@@ -357,10 +357,11 @@ getCodeCoverageSymbols(DiagnosticsEngine &diag,
                                              /*STDOUT=*/llvm::None,
                                              /*STDERR=*/StringRef(stderrFile)};
 
-    bool failed = sys::ExecuteAndWait(clangBinary.get(), clangArgs,
-                                      /*env=*/nullptr, redirects);
+    std::string *ErrMsg=nullptr;
+    bool *ExecutionFailed;
+    sys::ExecuteAndWait(clangBinary.get(), llvm::toStringRefArray(clangArgs), /*env=*/NoneType::None, redirects, 0, 0, ErrMsg, ExecutionFailed);
 
-    if (failed) {
+    if (ExecutionFailed) {
       auto bufferOr = MemoryBuffer::getFile(stderrFile);
       if (auto ec = bufferOr.getError())
         return make_error<StringError>("unable to read file", ec);
@@ -498,7 +499,7 @@ bool Driver::InstallAPI::run(DiagnosticsEngine &diag, Options &opts) {
   FrontendJob job;
   job.workingDirectory = globalSnapshot->getWorkingDirectory();
   job.cacheFactory = newFileSystemStatCacheFactory<StatRecorder>();
-  job.vfs = fm.getVirtualFileSystem();
+  job.vfs = &fm.getVirtualFileSystem();
   job.language = opts.frontendOptions.language;
   job.language_std = opts.frontendOptions.language_std;
   job.useRTTI = opts.frontendOptions.useRTTI;
@@ -522,11 +523,12 @@ bool Driver::InstallAPI::run(DiagnosticsEngine &diag, Options &opts) {
     return false;
   }
 
-  const FileEntry *jsonFile = nullptr;
+  const clang::FileEntry *jsonFile = nullptr;
+  //const FileEntry *jsonFile = nullptr;
   for (const auto &path : opts.driverOptions.inputs) {
     if (sys::path::extension(path) == ".json") {
-      if (auto *file = fm.getFile(path)) {
-        jsonFile = file;
+      if (auto file = fm.getFile(path)) {
+        jsonFile = file.get();
         break;
       }
     }
@@ -545,7 +547,7 @@ bool Driver::InstallAPI::run(DiagnosticsEngine &diag, Options &opts) {
     for (const auto &path : opts.driverOptions.inputs) {
       if (fm.isDirectory(path, /*CacheFailure=*/false)) {
         SmallString<PATH_MAX> normalizedPath(path);
-        fm.getVirtualFileSystem()->makeAbsolute(normalizedPath);
+        fm.getVirtualFileSystem().makeAbsolute(normalizedPath);
         sys::path::remove_dots(normalizedPath, /*remove_dot_dot=*/true);
         if (!scanner.scan(normalizedPath, frameworks))
           return false;
@@ -578,7 +580,7 @@ bool Driver::InstallAPI::run(DiagnosticsEngine &diag, Options &opts) {
 
     frameworkName = sys::path::stem(framework->getName());
     for (const auto &header : framework->_headerFiles) {
-      auto *file = fm.getFile(header.fullPath);
+      auto file = fm.getFile(header.fullPath);
       if (!file) {
         if (header.type == HeaderType::Public)
           diag.report(diag::err_no_such_public_header_file) << header.fullPath;
@@ -598,7 +600,7 @@ bool Driver::InstallAPI::run(DiagnosticsEngine &diag, Options &opts) {
     }
   } else {
     Registry registry;
-    auto reader = make_unique<YAMLReader>();
+    auto reader = std::make_unique<YAMLReader>();
     reader->add(std::unique_ptr<DocumentHandler>(
         new json_file::v1::YAMLDocumentHandler));
     registry.add(std::move(reader));
@@ -665,8 +667,8 @@ bool Driver::InstallAPI::run(DiagnosticsEngine &diag, Options &opts) {
         excludeHeaderGlobs.emplace_back(std::move(glob.get()));
       else {
         consumeError(glob.takeError());
-        if (auto file = fm.getFile(str))
-          excludeHeaderFiles.emplace(file);
+        if (auto fileOrErr = fm.getFile(str))
+          excludeHeaderFiles.emplace(fileOrErr.get());
         else {
           diag.report(diagID) << str;
           return false;
@@ -692,9 +694,13 @@ bool Driver::InstallAPI::run(DiagnosticsEngine &diag, Options &opts) {
 
   if (!excludeHeaderFiles.empty()) {
     for (auto &header : headerFiles) {
-      const auto *file = fm.getFile(header.fullPath);
-      if (excludeHeaderFiles.count(file))
-        header.isExcluded = true;
+      const auto fileOrError = fm.getFile(header.fullPath);
+      if (fileOrError) {
+          const auto file = fileOrError.get();
+
+          if (excludeHeaderFiles.count(file))
+              header.isExcluded = true;
+      }
     }
   }
 
@@ -806,13 +812,13 @@ bool Driver::InstallAPI::run(DiagnosticsEngine &diag, Options &opts) {
     }
   }
 
-  auto headerSymbols = make_unique<XPISet>();
+  auto headerSymbols = std::make_unique<XPISet>();
   for (auto &result : frontendResults) {
     API2XPIConverter converter(headerSymbols.get(), result.target);
     result.visit(converter);
   }
 
-  auto scanFile = make_unique<ExtendedInterfaceFile>(std::move(headerSymbols));
+  auto scanFile = std::make_unique<ExtendedInterfaceFile>(std::move(headerSymbols));
 
   if (opts.tapiOptions.printAfter == "xpi")
     scanFile->printSymbols(ArchitectureSet::All());
@@ -911,7 +917,7 @@ bool Driver::InstallAPI::run(DiagnosticsEngine &diag, Options &opts) {
     return false;
   }
 
-  auto interface = make_unique<InterfaceFile>(std::move(*scanFile.get()));
+  auto interface = std::make_unique<InterfaceFile>(std::move(*scanFile.get()));
   auto result =
       manager.writeFile(interface.get(), opts.driverOptions.outputPath);
   if (result) {

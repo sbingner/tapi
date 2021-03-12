@@ -149,7 +149,7 @@ void Registry::addBinaryReaders() {
 }
 
 void Registry::addYAMLReaders() {
-  auto reader = make_unique<YAMLReader>();
+  auto reader = std::make_unique<YAMLReader>();
   reader->add(
       std::unique_ptr<DocumentHandler>(new stub::v1::YAMLDocumentHandler));
   reader->add(
@@ -160,7 +160,7 @@ void Registry::addYAMLReaders() {
 }
 
 void Registry::addYAMLWriters() {
-  auto writer = make_unique<YAMLWriter>();
+  auto writer = std::make_unique<YAMLWriter>();
   writer->add(
       std::unique_ptr<DocumentHandler>(new stub::v1::YAMLDocumentHandler));
   writer->add(
@@ -174,6 +174,6 @@ void Registry::addReexportWriters() {
   add(std::unique_ptr<Writer>(new ReexportFileWriter));
 }
 
-void Registry::addDiagnosticReader() { add(make_unique<DiagnosticReader>()); }
+void Registry::addDiagnosticReader() { add(std::make_unique<DiagnosticReader>()); }
 
 TAPI_NAMESPACE_INTERNAL_END

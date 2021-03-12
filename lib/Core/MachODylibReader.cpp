@@ -25,19 +25,6 @@
 using namespace llvm;
 using namespace llvm::object;
 
-// Define missing platform enums.
-namespace llvm {
-namespace MachO {
-// clang-format off
-  enum MissingPlatformType {
-    PLATFORM_IOSSIMULATOR     = 7,
-    PLATFORM_TVOSSIMULATOR    = 8,
-    PLATFORM_WATCHOSSIMULATOR = 9,
-  };
-// clang-format on
-} // end namespace MachO.
-} // end namespace llvm.
-
 TAPI_NAMESPACE_INTERNAL_BEGIN
 
 Expected<FileType>
@@ -266,12 +253,17 @@ static Error readMachOHeaderData(MachOObjectFile *object,
   }
 
   for (auto &section : object->sections()) {
-    StringRef sectionName;
-    section.getName(sectionName);
+    Expected<StringRef> sectionNameOrErr = section.getName();
+    if (!sectionNameOrErr) continue;
+    StringRef sectionName = sectionNameOrErr.get();
+
     if (sectionName != "__objc_imageinfo" && sectionName != "__image_info")
       continue;
-    StringRef content;
-    section.getContents(content);
+    Expected<StringRef> contentOrErr = section.getContents();
+    if (!contentOrErr) continue;
+
+    StringRef content = *contentOrErr;
+
     if ((content.size() >= 8) && (content[0] == 0)) {
       uint32_t flags;
       if (object->isLittleEndian()) {

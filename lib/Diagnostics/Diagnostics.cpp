@@ -140,7 +140,7 @@ void DiagnosticsEngine::setupDiagnosticsFile(StringRef output) {
   raw_ostream *os = &llvm::errs();
   if (output != "-") {
     // Create the output stream.
-    auto fileOS = llvm::make_unique<llvm::raw_fd_ostream>(
+    auto fileOS = std::make_unique<llvm::raw_fd_ostream>(
         output, ec, llvm::sys::fs::F_Append | llvm::sys::fs::F_Text);
     if (ec) {
       report(diag::err_cannot_open_file) << output << ec.message();
@@ -153,7 +153,7 @@ void DiagnosticsEngine::setupDiagnosticsFile(StringRef output) {
   diagOpts->DiagnosticLogFile = output.str();
 
   // Chain in the diagnostic client which will log the diagnostics.
-  auto Logger = llvm::make_unique<clang::LogDiagnosticPrinter>(
+  auto Logger = std::make_unique<clang::LogDiagnosticPrinter>(
       *os, diagOpts.get(), std::move(streamOwner));
   assert(diag->ownsClient());
   diag->setClient(new clang::ChainedDiagnosticConsumer(diag->takeClient(),

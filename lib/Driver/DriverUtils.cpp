@@ -15,9 +15,9 @@
 #include "tapi/Core/FileManager.h"
 #include "tapi/Core/Utils.h"
 #include "tapi/Diagnostics/Diagnostics.h"
-#include "clang/Basic/VirtualFileSystem.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/VirtualFileSystem.h"
 
 using namespace llvm;
 using namespace clang;
@@ -28,10 +28,10 @@ static void findAndAddHeaderFilesImpl(HeaderSeq &headersOut, FileManager &fm,
                                       DiagnosticsEngine &diag, StringRef path,
                                       HeaderType type) {
   std::error_code ec;
-  auto &fs = *fm.getVirtualFileSystem();
+  auto &fs = fm.getVirtualFileSystem();
   for (vfs::directory_iterator i = fs.dir_begin(path, ec), ie; i != ie;
        i.increment(ec)) {
-    auto path = i->getName();
+    auto path = i->path();
 
     // Skip files that not exist. This usually happens for broken symlinks.
     if (ec == std::errc::no_such_file_or_directory) {

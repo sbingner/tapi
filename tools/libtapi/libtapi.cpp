@@ -47,11 +47,15 @@ void llvm_unreachable_internal(const char *, const char *, unsigned) {
 
 namespace sys {
 
+#ifdef __APPLE__
+
 bool RemoveFileOnSignal(StringRef Filename, std::string *ErrMsg) { abort(); }
 
 void DontRemoveFileOnSignal(StringRef Filename) { abort(); }
 
 void AddSignalHandler(void (*)(void *), void *) { abort(); }
+
+#endif
 
 } // end namespace sys.
 

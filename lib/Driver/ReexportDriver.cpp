@@ -95,13 +95,13 @@ bool Driver::Reexport::run(DiagnosticsEngine &diag, Options &opts) {
     frontendResults.emplace_back(std::move(result.getValue()));
   }
 
-  auto headerSymbols = make_unique<XPISet>();
+  auto headerSymbols = std::make_unique<XPISet>();
   for (auto &result : frontendResults) {
     API2XPIConverter converter(headerSymbols.get(), result.target);
     result.visit(converter);
   }
 
-  auto scanFile = make_unique<ExtendedInterfaceFile>(std::move(headerSymbols));
+  auto scanFile = std::make_unique<ExtendedInterfaceFile>(std::move(headerSymbols));
   scanFile->setFileType(FileType::ReexportFile);
   scanFile->setArchitectures(
       mapToArchitectureSet(opts.frontendOptions.targets));

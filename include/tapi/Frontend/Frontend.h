@@ -28,9 +28,9 @@ TAPI_NAMESPACE_INTERNAL_BEGIN
 struct FrontendJob {
   std::string workingDirectory;
   IntrusiveRefCntPtr<FileSystemStatCacheFactory> cacheFactory;
-  IntrusiveRefCntPtr<clang::vfs::FileSystem> vfs;
+  IntrusiveRefCntPtr<llvm::vfs::FileSystem> vfs;
   llvm::Triple target;
-  clang::InputKind::Language language = clang::InputKind::Unknown;
+  clang::Language language = clang::Language::Unknown;
   bool useRTTI = true;
   bool enableModules = false;
   bool validateSystemHeaders = false;

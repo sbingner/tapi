@@ -1,6 +1,6 @@
-if(NOT APPLE)
-  message(FATAL_ERROR "Unsupported configuration.")
-endif()
+#if(NOT APPLE)
+#  message(FATAL_ERROR "Unsupported configuration.")
+#endif()
 
 set(TAPI_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 set(TAPI_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR})
@@ -38,11 +38,11 @@ endif()
 if(DEFINED ENV{RC_SUPPORTED_ARCHS})
   string(REPLACE " " ";" TAPI_SUPPORTED_ARCHS $ENV{RC_SUPPORTED_ARCHS})
 elseif(NOT DEFINED TAPI_SUPPORTED_ARCHS)
-  set(TAPI_SUPPORTED_ARCHS i386 x86_64 x86_64h armv4t armv6 armv5 armv7 armv7s armv7k armv6m armv7m armv7em arm64)
+  set(TAPI_SUPPORTED_ARCHS i386 x86_64 x86_64h armv4t armv6 armv5 armv7 armv7s armv7k armv6m armv7m armv7em arm64 arm64e)
 endif()
 message(STATUS "Supported Architectures: ${TAPI_SUPPORTED_ARCHS}")
 
-set(KNOWN_ARCHS i386 x86_64 x86_64h armv4t armv6 armv5 armv7 armv7s armv7k armv6m armv7m armv7em arm64)
+set(KNOWN_ARCHS i386 x86_64 x86_64h armv4t armv6 armv5 armv7 armv7s armv7k armv6m armv7m armv7em arm64 arm64e)
 
 set (CONFIG_FILE ${CMAKE_CURRENT_BINARY_DIR}/include/tapi/Core/ArchitectureConfig.h)
 file(WRITE ${CONFIG_FILE} "#ifndef TAPI_CORE_ARCHITECTURE_CONFIG_H\n")
@@ -170,6 +170,13 @@ include_directories(BEFORE
   ${CMAKE_CURRENT_BINARY_DIR}/include
   ${CMAKE_CURRENT_SOURCE_DIR}/include
   )
+
+if (LLVM_EXTERNAL_CLANG_SOURCE_DIR)
+    include_directories(${LLVM_EXTERNAL_CLANG_SOURCE_DIR}/include)
+else ()
+    include_directories(${CMAKE_SOURCE_DIR}/tools/clang/include)
+endif ()
+include_directories("${CMAKE_CURRENT_BINARY_DIR}/../../tools/clang/include")
 
 option(TAPI_INCLUDE_TESTS "Generate build targets for the TAPI unit tests."
        ${LLVM_INCLUDE_TESTS})
